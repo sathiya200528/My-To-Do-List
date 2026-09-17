@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My To-Do List</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <div>
+            <h1>My To-Do List</h1>
+            <p>Organize your day, one task at a time ✨</p>
+        </div>
+
+        <button id="themeButton" class="theme-btn" onclick="toggleTheme()">
+            🌙
+        </button>
+    </div>
+
+
+    <div class="input-card">
+
+        <input
+            type="text"
+            id="taskInput"
+            placeholder="What do you need to do?"
+        >
+
+        <textarea
+            id="taskNotes"
+            placeholder="📝 Add a note..."
+        ></textarea>
+
+        <div class="input-row">
+
+            <input type="date" id="taskDate">
+
+            <select id="taskPriority">
+                <option value="High">🔴 High</option>
+                <option value="Medium" selected>🟡 Medium</option>
+                <option value="Low">🟢 Low</option>
+            </select>
+
+            <select id="taskCategory" onchange="showOtherCategory()">
+                <option value="Study">📚 Study</option>
+                <option value="Work">💼 Work</option>
+                <option value="Personal">🏠 Personal</option>
+                <option value="Other">📌 Other</option>
+            </select>
+
+        </div>
+
+        <!-- Custom category input -->
+        <input
+            type="text"
+            id="otherCategory"
+            placeholder="Enter your category..."
+            style="display: none;"
+        >
+
+        <button class="add-btn" onclick="addTask()">
+            ＋ Add Task
+        </button>
+
+    </div>
+
+
+    <div class="progress-card">
+
+        <div class="progress-header">
+            <span id="progressText">Progress: 0%</span>
+
+            <span id="taskCounter">
+                Total: 0 | Active: 0 | Completed: 0
+            </span>
+        </div>
+
+        <div class="progress-background">
+            <div id="progressBar"></div>
+        </div>
+
+    </div>
+
+
+    <div class="tools">
+
+        <input
+            type="text"
+            id="searchInput"
+            placeholder="🔍 Search tasks..."
+            onkeyup="searchTasks()"
+        >
+
+        <div class="filter-buttons">
+
+            <button onclick="filterTasks('all')">
+                All
+            </button>
+
+            <button onclick="filterTasks('active')">
+                Active
+            </button>
+
+            <button onclick="filterTasks('completed')">
+                Completed
+            </button>
+
+            <button onclick="filterTasks('important')">
+                ⭐ Important
+            </button>
+
+        </div>
+
+
+        <div class="select-row">
+
+            <select id="sortSelect" onchange="sortTasks()">
+                <option value="newest">Newest First</option>
+                <option value="priority">Priority</option>
+                <option value="date">Due Date</option>
+            </select>
+
+            <select id="categoryFilter" onchange="categoryFilter()">
+                <option value="all">🏷️ All Categories</option>
+                <option value="Study">📚 Study</option>
+                <option value="Work">💼 Work</option>
+                <option value="Personal">🏠 Personal</option>
+                <option value="Other">📌 Other</option>
+            </select>
+
+        </div>
+
+    </div>
+
+
+    <ul id="taskList"></ul>
+
+
+    <button class="clear-btn" onclick="clearAll()">
+        🗑️ Clear All Tasks
+    </button>
+
+</div>
+
+
+<script>
+
+let tasks =
+    JSON.parse(localStorage.getItem("tasks")) || [];
+
+let currentFilter = "all";
+let currentCategory = "all";
+
+
+tasks = tasks.map(function(task) {
+
+    if (typeof task === "string") {
+
+        return {
+            text: task,
+            notes: "",
+            completed: false,
+            date: "",
+            priority: "Medium",
+            category: "Other",
+            important: false
+        };
+
+    }
+
+    if (!task.date) task.date = "";
+    if (!task.priority) task.priority = "Medium";
+    if (!task.category) task.category = "Other";
+    if (!task.notes) task.notes = "";
+
+    if (task.important === undefined) {
+        task.important = false;
+    }
+
+    return task;
+
+});
+
+
+saveTasks();
+
+
+function saveTasks() {
+
+    localStorage.setItem(
+        "tasks",
+        JSON.stringify(tasks)
+    );
+
+}
+
+
+/* =========================
+   OTHER CATEGORY
+========================= */
+
+function showOtherCategory() {
+
+    let categoryInput =
+        document.getElementById("taskCategory");
+
+    let otherInput =
+        document.getElementById("otherCategory");
+
+
+    if (categoryInput.value === "Other") {
+
+        otherInput.style.display = "block";
+
+    }
+    else {
+
+        otherInput.style.display = "none";
+        otherInput.value = "";
+
+    }
+
+}
+
+
+/* =========================
+   ADD TASK
+========================= */
+
+function addTask() {
+
+    let input =
+        document.getElementById("taskInput");
+
+    let notesInput =
+        document.getElementById("taskNotes");
+
+    let dateInput =
+        document.getElementById("taskDate");
+
+    let priorityInput =
+        document.getElementById("taskPriority");
+
+    let categoryInput =
+        document.getElementById("taskCategory");
+
+    let otherInput =
+        document.getElementById("otherCategory");
+
+
+    let task =
+        input.value.trim();
+
+    let notes =
+        notesInput.value.trim();
+
+    let date =
+        dateInput.value;
+
+    let priority =
+        priorityInput.value;
+
+    let category =
+        categoryInput.value;
+
+
+    /* If Other is selected,
+       use the custom category */
+
+    if (category === "Other") {
+
+        let customCategory =
+            otherInput.value.trim();
+
+
+        if (customCategory === "") {
+
+            alert("Please enter your category");
+            return;
+
+        }
+
+
+        category =
+            customCategory;
+
+    }
+
+
+    if (task === "") {
+
+        alert("Please enter a task");
+        return;
+
+    }
+
+
+    tasks.push({
+
+        text: task,
+        notes: notes,
+        completed: false,
+        date: date,
+        priority: priority,
+        category: category,
+        important: false
+
+    });
+
+
+    saveTasks();
+
+
+    input.value = "";
+    notesInput.value = "";
+    dateInput.value = "";
+    priorityInput.value = "Medium";
+    categoryInput.value = "Study";
+    otherInput.value = "";
+    otherInput.style.display = "none";
+
+
+    displayTasks();
+
+}
+
+
+/* =========================
+   DATE STATUS
+========================= */
+
+function getDateStatus(date) {
+
+    if (!date) return "";
+
+
+    let today = new Date();
+
+    today.setHours(0, 0, 0, 0);
+
+
+    let taskDate =
+        new Date(date + "T00:00:00");
+
+    taskDate.setHours(0, 0, 0, 0);
+
+
+    if (taskDate.getTime() === today.getTime()) {
+
+        return "🟡 Today";
+
+    }
+
+
+    if (taskDate < today) {
+
+        return "🔴 Overdue";
+
+    }
+
+
+    return "🟢 Upcoming";
+
+}
+
+
+/* =========================
+   REMINDERS
+========================= */
+
+function checkReminders() {
+
+    let todayTasks = [];
+    let overdueTasks = [];
+
+
+    tasks.forEach(function(task) {
+
+        if (
+            task.completed ||
+            task.date === ""
+        ) {
+            return;
+        }
+
+
+        let status =
+            getDateStatus(task.date);
+
+
+        if (status === "🟡 Today") {
+
+            todayTasks.push(task.text);
+
+        }
+
+
+        if (status === "🔴 Overdue") {
+
+            overdueTasks.push(task.text);
+
+        }
+
+    });
+
+
+    let message = "";
+
+
+    if (todayTasks.length > 0) {
+
+        message +=
+            "🔔 Tasks Due Today:\n\n";
+
+
+        todayTasks.forEach(function(task) {
+
+            message += "• " + task + "\n";
+
+        });
+
+    }
+
+
+    if (overdueTasks.length > 0) {
+
+        if (message !== "") {
+            message += "\n";
+        }
+
+
+        message +=
+            "⚠️ Overdue Tasks:\n\n";
+
+
+        overdueTasks.forEach(function(task) {
+
+            message += "• " + task + "\n";
+
+        });
+
+    }
+
+
+    if (message !== "") {
+
+        setTimeout(function() {
+
+            alert(message);
+
+        }, 500);
+
+    }
+
+}
+
+
+/* =========================
+   CATEGORY ICON
+========================= */
+
+function getCategoryIcon(category) {
+
+    if (category === "Study") return "📚";
+
+    if (category === "Work") return "💼";
+
+    if (category === "Personal") return "🏠";
+
+    return "📌";
+
+}
+
+
+/* =========================
+   DISPLAY TASKS
+========================= */
+
+function displayTasks(filteredTasks = tasks) {
+
+    let taskList =
+        document.getElementById("taskList");
+
+    taskList.innerHTML = "";
+
+
+    filteredTasks.forEach(function(task) {
+
+        let index =
+            tasks.indexOf(task);
+
+
+        let li =
+            document.createElement("li");
+
+
+        li.className =
+            task.completed
+                ? "task completed"
+                : "task";
+
+
+        let topRow =
+            document.createElement("div");
+
+        topRow.className =
+            "task-top";
+
+
+        let leftSide =
+            document.createElement("div");
+
+        leftSide.className =
+            "task-left";
+
+
+        let starButton =
+            document.createElement("button");
+
+        starButton.textContent =
+            task.important ? "⭐" : "☆";
+
+        starButton.className =
+            "star-btn";
+
+
+        starButton.onclick =
+            function(event) {
+
+                event.stopPropagation();
+
+                task.important =
+                    !task.important;
+
+                saveTasks();
+                displayTasks();
+
+            };
+
+
+        let taskText =
+            document.createElement("span");
+
+        taskText.textContent =
+            task.text;
+
+        taskText.className =
+            "task-title";
+
+
+        leftSide.appendChild(starButton);
+        leftSide.appendChild(taskText);
+
+
+        let actionButtons =
+            document.createElement("div");
+
+        actionButtons.className =
+            "action-buttons";
+
+
+        let editButton =
+            document.createElement("button");
+
+        editButton.textContent = "Edit";
+        editButton.className = "edit-btn";
+
+
+        editButton.onclick =
+            function(event) {
+
+                event.stopPropagation();
+
+
+                let newTask =
+                    prompt(
+                        "Edit your task:",
+                        task.text
+                    );
+
+
+                if (
+                    newTask !== null &&
+                    newTask.trim() !== ""
+                ) {
+
+                    task.text =
+                        newTask.trim();
+
+
+                    let newNotes =
+                        prompt(
+                            "Edit notes:",
+                            task.notes
+                        );
+
+
+                    if (newNotes !== null) {
+
+                        task.notes =
+                            newNotes.trim();
+
+                    }
+
+
+                    saveTasks();
+                    displayTasks();
+
+                }
+
+            };
+
+
+        let deleteButton =
+            document.createElement("button");
+
+        deleteButton.textContent =
+            "Delete";
+
+        deleteButton.className =
+            "delete-btn";
+
+
+        deleteButton.onclick =
+            function(event) {
+
+                event.stopPropagation();
+
+
+                tasks.splice(index, 1);
+
+                saveTasks();
+                displayTasks();
+
+            };
+
+
+        actionButtons.appendChild(editButton);
+        actionButtons.appendChild(deleteButton);
+
+
+        topRow.appendChild(leftSide);
+        topRow.appendChild(actionButtons);
+
+        li.appendChild(topRow);
+
+
+        if (task.notes !== "") {
+
+            let notesText =
+                document.createElement("div");
+
+            notesText.textContent =
+                "📝 " + task.notes;
+
+            notesText.className =
+                "task-notes";
+
+            li.appendChild(notesText);
+
+        }
+
+
+        let info =
+            document.createElement("div");
+
+        info.className =
+            "task-info";
+
+
+        let category =
+            document.createElement("span");
+
+        category.textContent =
+            getCategoryIcon(task.category) +
+            " " +
+            task.category;
+
+
+        let priority =
+            document.createElement("span");
+
+
+        if (task.priority === "High") {
+
+            priority.textContent = "🔴 High";
+
+        }
+        else if (task.priority === "Medium") {
+
+            priority.textContent = "🟡 Medium";
+
+        }
+        else {
+
+            priority.textContent = "🟢 Low";
+
+        }
+
+
+        info.appendChild(category);
+        info.appendChild(priority);
+
+
+        if (task.date !== "") {
+
+            let date =
+                document.createElement("span");
+
+            date.textContent =
+                "📅 " + task.date;
+
+            info.appendChild(date);
+
+
+            let status =
+                document.createElement("span");
+
+            status.textContent =
+                getDateStatus(task.date);
+
+            info.appendChild(status);
+
+        }
+
+
+        li.appendChild(info);
+
+
+        li.onclick = function() {
+
+            task.completed =
+                !task.completed;
+
+            saveTasks();
+            displayTasks();
+
+        };
+
+
+        taskList.appendChild(li);
+
+    });
+
+
+    updateCounter();
+
+}
+
+
+/* =========================
+   COUNTER & PROGRESS
+========================= */
+
+function updateCounter() {
+
+    let total =
+        tasks.length;
+
+
+    let completed =
+        tasks.filter(function(task) {
+
+            return task.completed;
+
+        }).length;
+
+
+    let active =
+        total - completed;
+
+
+    document.getElementById(
+        "taskCounter"
+    ).textContent =
+        "Total: " +
+        total +
+        " | Active: " +
+        active +
+        " | Completed: " +
+        completed;
+
+
+    let progress = 0;
+
+
+    if (total > 0) {
+
+        progress =
+            Math.round(
+                (completed / total) * 100
+            );
+
+    }
+
+
+    document.getElementById(
+        "progressText"
+    ).textContent =
+        "Progress: " + progress + "%";
+
+
+    document.getElementById(
+        "progressBar"
+    ).style.width =
+        progress + "%";
+
+}
+
+
+/* =========================
+   SEARCH
+========================= */
+
+function searchTasks() {
+
+    let searchInput =
+        document.getElementById(
+            "searchInput"
+        ).value.toLowerCase();
+
+
+    let filteredTasks =
+        tasks.filter(function(task) {
+
+            return (
+                task.text
+                    .toLowerCase()
+                    .includes(searchInput)
+
+                ||
+
+                task.notes
+                    .toLowerCase()
+                    .includes(searchInput)
+
+                ||
+
+                task.category
+                    .toLowerCase()
+                    .includes(searchInput)
+            );
+
+        });
+
+
+    filteredTasks =
+        applyFilter(filteredTasks);
+
+
+    filteredTasks =
+        applyCategoryFilter(filteredTasks);
+
+
+    displayTasks(filteredTasks);
+
+}
+
+
+/* =========================
+   FILTER
+========================= */
+
+function filterTasks(filter) {
+
+    currentFilter = filter;
+
+    searchTasks();
+
+}
+
+
+function applyFilter(taskList) {
+
+    if (currentFilter === "active") {
+
+        return taskList.filter(function(task) {
+
+            return !task.completed;
+
+        });
+
+    }
+
+
+    if (currentFilter === "completed") {
+
+        return taskList.filter(function(task) {
+
+            return task.completed;
+
+        });
+
+    }
+
+
+    if (currentFilter === "important") {
+
+        return taskList.filter(function(task) {
+
+            return task.important;
+
+        });
+
+    }
+
+
+    return taskList;
+
+}
+
+
+/* =========================
+   CATEGORY FILTER
+========================= */
+
+function categoryFilter() {
+
+    currentCategory =
+        document.getElementById(
+            "categoryFilter"
+        ).value;
+
+
+    searchTasks();
+
+}
+
+
+function applyCategoryFilter(taskList) {
+
+    if (currentCategory === "all") {
+
+        return taskList;
+
+    }
+
+
+    return taskList.filter(function(task) {
+
+        return task.category === currentCategory;
+
+    });
+
+}
+
+
+/* =========================
+   SORT
+========================= */
+
+function sortTasks() {
+
+    let sortType =
+        document.getElementById(
+            "sortSelect"
+        ).value;
+
+
+    let sortedTasks =
+        [...tasks];
+
+
+    if (sortType === "newest") {
+
+        sortedTasks.reverse();
+
+    }
+
+
+    if (sortType === "priority") {
+
+        let priorityOrder = {
+
+            High: 1,
+            Medium: 2,
+            Low: 3
+
+        };
+
+
+        sortedTasks.sort(function(a, b) {
+
+            return (
+                priorityOrder[a.priority] -
+                priorityOrder[b.priority]
+            );
+
+        });
+
+    }
+
+
+    if (sortType === "date") {
+
+        sortedTasks.sort(function(a, b) {
+
+            if (!a.date) return 1;
+
+            if (!b.date) return -1;
+
+
+            return (
+                new Date(a.date) -
+                new Date(b.date)
+            );
+
+        });
+
+    }
+
+
+    let searchInput =
+        document.getElementById(
+            "searchInput"
+        ).value.toLowerCase();
+
+
+    sortedTasks =
+        sortedTasks.filter(function(task) {
+
+            return (
+                task.text
+                    .toLowerCase()
+                    .includes(searchInput)
+
+                ||
+
+                task.notes
+                    .toLowerCase()
+                    .includes(searchInput)
+
+                ||
+
+                task.category
+                    .toLowerCase()
+                    .includes(searchInput)
+            );
+
+        });
+
+
+    sortedTasks =
+        applyFilter(sortedTasks);
+
+
+    sortedTasks =
+        applyCategoryFilter(sortedTasks);
+
+
+    displayTasks(sortedTasks);
+
+}
+
+
+/* =========================
+   CLEAR ALL
+========================= */
+
+function clearAll() {
+
+    if (
+        confirm(
+            "Are you sure you want to delete all tasks?"
+        )
+    ) {
+
+        tasks = [];
+
+        localStorage.removeItem("tasks");
+
+        displayTasks();
+
+    }
+
+}
+
+
+/* =========================
+   DARK MODE
+========================= */
+
+function toggleTheme() {
+
+    document.body.classList.toggle("dark");
+
+
+    let button =
+        document.getElementById("themeButton");
+
+
+    if (
+        document.body.classList.contains("dark")
+    ) {
+
+        button.textContent = "☀️";
+
+
+        localStorage.setItem(
+            "theme",
+            "dark"
+        );
+
+    }
+    else {
+
+        button.textContent = "🌙";
+
+
+        localStorage.setItem(
+            "theme",
+            "light"
+        );
+
+    }
+
+}
+
+
+if (
+    localStorage.getItem("theme") === "dark"
+) {
+
+    document.body.classList.add("dark");
+
+
+    document.getElementById(
+        "themeButton"
+    ).textContent = "☀️";
+
+}
+
+
+/* =========================
+   ENTER KEY
+========================= */
+
+document.getElementById(
+    "taskInput"
+).addEventListener(
+    "keypress",
+    function(event) {
+
+        if (event.key === "Enter") {
+
+            addTask();
+
+        }
+
+    }
+);
+
+
+/* =========================
+   START APPLICATION
+========================= */
+
+displayTasks();
+
+checkReminders();
+
+</script>
+
+</body>
+</html>
